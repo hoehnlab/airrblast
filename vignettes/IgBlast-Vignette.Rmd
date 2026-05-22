@@ -1,0 +1,153 @@
+---
+title: 'Performing V(D)J alignment using IgBlast via Dowser'
+author: "Kenneth B. Hoehn"
+date: '`r Sys.Date()`'
+output:
+  pdf_document:
+    dev: pdf
+    fig_height: 4
+    fig_width: 7.5
+    highlight: pygments
+    toc: yes
+  html_document:
+    fig_height: 4
+    fig_width: 7.5
+    highlight: pygments
+    theme: readable
+    toc: yes
+  md_document:
+    fig_height: 4
+    fig_width: 7.5
+    preserve_yaml: no
+    toc: yes
+geometry: margin=1in
+fontsize: 11pt
+vignette: >
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteIndexEntry{Alignment with IgBlast}
+  %\VignetteEncoding{UTF-8}  
+  %\usepackage[utf8]{inputenc}
+---
+
+**Warning, experimental features under active development!**
+
+Alignment to V, D, and J gene segments is the critical first step of BCR and TCR analysis. Immcantation supports doing this using IgBlast as part of [Change-O](https://changeo.readthedocs.io/en/stable/examples/igblast.html). However, this setup requires running multiple bash scripts and Python scripts. Instead, we are developing an alternate pipeline that remains within R.
+
+## Download and set up IgBlast executibles
+
+[Download IgBlast binaries here](https://ftp.ncbi.nih.gov/blast/executables/igblast/release/LATEST/). Make sure the version matches your operating system. Move to the directory you want IgBlast to be located and extract the files. The extracted directory location is a critical input to this pipeline.
+
+## Install correct development branch of Dowser
+
+These functions are only available in the `igblast` branch of Dowser.
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
+library(devtools)
+
+install_github("https://github.com/hoehnlab/airrblast")
+
+```
+
+## Download and set up reference database
+
+We can now download the IMGT GENE-DB reference database, and convert it into a search database that IgBlast can use. The commands will create the directories `imgt` and `igblast` and only need to be run once.
+
+These functions are a direct re-coding of the functions in [this setup](https://changeo.readthedocs.io/en/stable/examples/igblast.html)
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
+library(airrblast)
+
+# Location of IgBlast directory
+# replace with the name of the directory downloaded
+igblast_dir <- "ncbi-igblast-1.22.0"
+
+# Download IMGT GENE-DB int directory "imgt"
+# specifying the organism is not necessary, but saves download time
+downloadIMGT("imgt", organism="human")
+
+# Set up search databases for IgBlast using imgt database
+imgtToIgblast("imgt", "igblast", igblast_dir)
+```
+
+## Align BCR sequences to V(D)J references
+
+Here, we align a fasta file of BCR sequences to the IMGT human reference database and add IMGT gaps.
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
+library(dplyr)
+library(airr)
+
+data(ExampleFasta)
+
+# make example fasta file
+writeFasta(ExampleFasta, "test.fasta")
+
+# Align sequences using IgBlast
+data <- assignGenes("test.fasta", 
+	igblast=igblast_dir,
+	refs="igblast",
+	outfile="test.tsv")
+
+# optional, read in output file using AIRR package
+data <- airr::read_rearrangement("test.tsv")
+
+# Add IMGT gaps. gapdb is the downloaded imgt reference directory
+gapped_data <- addGaps(data, gapdb="imgt", organism="human", locus="Ig")
+
+# remove sequences with missing junctions
+gapped_data <- dplyr::filter(gapped_data, !is.na(junction))
+
+# optional, save gapped database using AIRR package
+airr::write_rearrangement(gapped_data, "test_gapped.tsv")
+```
+
+## Identifying clones, reconstructing germlines, building trees.
+
+From here, you can perform any analyses supported by Immcantation within R. Here, we perform clonal clustering, reconstruct clonal germlines, build trees, and visualize them. These topics are handled in more detail on other pages. In particular:
+
+[Clonal clustering with Scoper](https://scoper.readthedocs.io/en/stable/vignettes/Scoper-Vignette/)
+[Building clonal germlines with Dowser](Germlines-Vignette.md)
+[Building trees with Dowser](Building-Trees-Vignette.md)
+[Plotting trees with Dowser](Plotting-Trees-Vignette.md)
+
+For a full tour, check out the [Immcantation tutorials](https://immcantation.readthedocs.io/en/stable/getting_started/getting-started.html). 
+
+```{r, eval=FALSE, warning=FALSE, message=FALSE}
+
+# note, these next steps use Scoper and Dowser functions
+library(scoper)
+library(dowser)
+
+# Identify clones using a threshold of 0.1 for convenience
+gapped_data <- hierarchicalClones(gapped_data, 0.1, summarize=FALSE)
+
+# read in IMGT database for clonal germline reconstruction
+# this is the same directory downloaded above. Isn't that nice?
+imgt = readIMGT("imgt/human/vdj")
+
+# reconstruct clonal germlines
+gapped_data = createGermlines(gapped_data, imgt, trim_lengths=TRUE)
+
+# formatClones for tree building
+clones = formatClones(gapped_data)
+
+# build trees
+trees = getTrees(clones, build="pml")
+
+# plot trees
+plots <- plotTrees(trees)
+
+# plot largest tree
+plots[[1]]
+
+# save all trees as a pdf
+treesToPDF(plots, file="trees.pdf")
+
+# save tree objects for later use
+saveRDS(trees, "trees.rds")
+```
+
+
+
+
+

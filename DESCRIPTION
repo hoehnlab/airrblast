@@ -1,0 +1,35 @@
+Package: airrblast
+Type: Package
+Version: 0.0.1
+Date: 2026-05-22
+Authors@R: c(person("Kenneth", "Hoehn", role=c("aut", "cre"),
+                    email="kenneth.b.hoehn@dartmouth.edu"),
+             person("Cole", "Jensen", role=c("ctb"),
+                    email="cole.jensen@yale.edu")
+                    )
+Title: airrblast
+Description: Airrblast is an experimental lightweight R package for running IgBlast on AIRR (BCR/TCR) data.
+License: AGPL-3
+URL: https://github.com/hoehnlab
+LazyData: true
+BuildVignettes: true
+VignetteBuilder: knitr
+Encoding: UTF-8
+Depends:
+    R (>= 4.0)
+biocViews:
+Imports:
+    airr,
+    alakazam (>= 1.1.0),
+    dplyr (>= 1.0),
+    utils
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat
+RoxygenNote: 7.3.3
+Collate:
+    'Airrblast.R'
+    'Data.R'
+    'Functions.R'
+    'zzz.R'

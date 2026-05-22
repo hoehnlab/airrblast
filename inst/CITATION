@@ -1,0 +1,12 @@
+bibentry(bibtype = "Article",
+        style   = "citation",
+        header  = "If you use airrblast lease also cite",
+        title   = "Inferring B Cell Phylogenies from Paired H and L Chain BCR Sequences with Dowser.",
+        author  = c(person("Cole G.", "Jensen"),
+                    person("Jacob A.", "Sumner"),
+                    person("Steven H.", "Kleinstein"),
+                    person("Kenneth B.", "Hoehn")),
+        year    = 2024,
+        journal = "The Journal of Immunology",
+        url = "https://doi.org/10.4049/jimmunol.2300851",
+        doi = "10.4049/jimmunol.2300851")

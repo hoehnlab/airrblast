@@ -500,13 +500,15 @@ assignGenes <- function(
 #' @param organism  Organism (human, mouse, rhesus_monkey)
 #' @param locus   Ig or TR
 #' @param gapped_d  Include IMGT gaps in D regions? Only applicable to 
+#' @param nproc   Nummber of threads to use
 #' @return AIRR-rearrangement formatted data frame in which sequence_alignment and germline_alignment
 #' have been updated with IMGT gaps
 #' @details 
 #' Similar functionality to MakeDb.py in Change-O. 
 #' 
 #' @export
-addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
+addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE, 
+                    nproc = 1){
   
   if(!organism %in% c("human", "mouse", "rhesus_monkey")){
     stop(paste("organism must be either human, mouse, rhesus_monkey"))
@@ -531,8 +533,7 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
   dgaps <- cleanSeqs(dgaps, rm_gaps=FALSE)
   
   
-  results <- dplyr::tibble()
-  for(i in 1:nrow(db)){
+  results <- do.call(rbind, parallel::mclapply(1:nrow(db), function(i){
     row <- db[i,]
     
     insertion_sites <- 0
@@ -555,12 +556,13 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
     }
     if(is.na(row$v_sequence_alignment)){
       warning(row$sequence_id, " v alignment not found")
-      next
+      return(NULL)
     }
     
-    if(paste0(row$v_sequence_alignment, row$np1, row$d_sequence_alignment, row$np2, row$j_sequence_alignment) != row$sequence_alignment){
+    if(paste0(row$v_sequence_alignment, row$np1, row$d_sequence_alignment, 
+              row$np2, row$j_sequence_alignment) != row$sequence_alignment){
       warning(row$sequence_id, " alignments don't add up")
-      next
+      return(NULL)
     }
     
     vcall <- strsplit(row$v_call, split=",")[[1]][1]
@@ -608,7 +610,8 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
     
     # add non gap characters to non-gap sites
     gstart <- row$v_germline_start
-    no_gap_pos_g <- no_gap_pos[1:row$v_germline_end] #gapped germline is always full length
+    # gapped germline is always full length
+    no_gap_pos_g <- no_gap_pos[1:row$v_germline_end] 
     no_gap_pos <- no_gap_pos[gstart:(gstart + length(gv) - 1)]
     
     v_germ_gap[no_gap_pos_g] <- gappedv[no_gap_pos_g]
@@ -649,8 +652,10 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       
       # add non gap characters to non-gap sites
       gdstart <- row$d_germline_start
-      no_gap_pos_gd <- no_gap_pos[gdstart:row$d_germline_end] #non-gap positions in germline 
-      no_gap_pos <- no_gap_pos[gdstart:row$d_germline_end] #non-gap positions in query
+      # non-gap positions in germline 
+      no_gap_pos_gd <- no_gap_pos[gdstart:row$d_germline_end] 
+      # non-gap positions in query
+      no_gap_pos <- no_gap_pos[gdstart:row$d_germline_end] 
       
       d_germ_gap[no_gap_pos_gd] <- gappedd[no_gap_pos_gd]
       d_quer_gap[no_gap_pos] <- qd
@@ -710,7 +715,7 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       if(gsub("\\.|-","",substr(row$sequence_alignment, row$fwr1_start, row$fwr1_end)) != row$fwr1){
         if(insertion_sites == 0){
           warning(row$sequence_id, " fwr1 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " fwr1 doesn't match but insertions present")
         }
@@ -718,13 +723,14 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       row$fwr1 <- substr(row$sequence_alignment, row$fwr1_start, row$fwr1_end)
       #}
     }
+    
     if(!is.na(row$cdr1)){
       row$cdr1_start <- 26*3+1
       row$cdr1_end <- 38*3
       if(gsub("\\.|-","",substr(row$sequence_alignment, row$cdr1_start, row$cdr1_end)) != row$cdr1){
         if(insertion_sites == 0){
           warning(row$sequence_id, " cdr1 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " cdr1 doesn't match but insertions present")
         }
@@ -732,13 +738,14 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       row$cdr1 <- substr(row$sequence_alignment, row$cdr1_start, row$cdr1_end)
       #}
     }
+    
     if(!is.na(row$fwr2)){
       row$fwr2_start <- 38*3+1
       row$fwr2_end <- 55*3
       if(gsub("\\.|-","",substr(row$sequence_alignment, row$fwr2_start, row$fwr2_end)) != row$fwr2){
         if(insertion_sites == 0){
           warning(row$sequence_id, " fwr2 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " fwr2 doesn't match but insertions present")
         }
@@ -746,13 +753,14 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       row$fwr2 <- substr(row$sequence_alignment, row$fwr2_start, row$fwr2_end)
       #}
     }
+    
     if(!is.na(row$cdr2)){
       row$cdr2_start <- 55*3+1
       row$cdr2_end <- 65*3
       if(gsub("\\.|\\-","",substr(row$sequence_alignment, row$cdr2_start, row$cdr2_end)) != row$cdr2){
         if(insertion_sites == 0){
           warning(row$sequence_id, " cdr2 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " cdr2 doesn't match but insertions present")
         }
@@ -760,13 +768,14 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       row$cdr2 <- substr(row$sequence_alignment, row$cdr2_start, row$cdr2_end)
       #}
     }
+    
     if(!is.na(row$fwr3)){
       row$fwr3_start <- 65*3+1
       row$fwr3_end <- 104*3
       if(gsub("\\.|-","",substr(row$sequence_alignment, row$fwr3_start, row$fwr3_end)) != row$fwr3){
         if(insertion_sites == 0){
           warning(row$sequence_id, " fwr3 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " fwr3 doesn't match but insertions present")
         }
@@ -774,6 +783,7 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       row$fwr3 <- substr(row$sequence_alignment, row$fwr3_start, row$fwr3_end)
       #}
     }
+    
     if(!is.na(row$junction)){
       row$cdr3_start <- 104*3+1
       row$cdr3_end <- 104*3+1 + row$junction_length -6 - 1 + dgaps_added - dpos_del
@@ -782,7 +792,7 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       if(gsub("\\.","",substr(row$sequence_alignment, row$cdr3_start, row$cdr3_end)) != row$cdr3){
         if(insertion_sites == 0){
           warning(row$sequence_id, " cdr3 doesn't match")
-          #next
+          #return(NULL)
         }else{
           warning(row$sequence_id, " cdr3 doesn't match but insertions present")
         }
@@ -797,10 +807,10 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
                               310+row$junction_length-1 + dgaps_added - dpos_del)) != row$junction){
         if(insertion_sites == 0){
           warning(row$sequence_id, " junction doesn't match")
-          next
+          return(NULL)
         }else{
           warning(row$sequence_id, " junction doesn't - insertions present")
-          next
+          return(NULL)
         }
       }else{
         row$junction <- gsub("\\.","",substr(row$sequence_alignment, 310, 
@@ -808,6 +818,7 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
         row$junction_aa <- alakazam::translateDNA(row$junction)
       }
     }
+    
     rm_cols <- c(
       "v_sequence_alignment", "d_sequence_alignment", "j_sequence_alignment",
       "v_germline_alignment", "d_germline_alignment", "j_germline_alignment",
@@ -817,8 +828,8 @@ addGaps <- function(db, gapdb, organism="human", locus="Ig", gapped_d=FALSE){
       "v_germline_alignment_aa", "d_germline_alignment_aa", "j_germline_alignment_aa"
     )
     row <- row[,!names(row) %in% rm_cols]
-    results <- dplyr::bind_rows(results, row)
-  }
+    return(row)
+  }, mc.cores = nproc))
   return(results)
 }
 

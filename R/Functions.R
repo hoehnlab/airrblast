@@ -460,6 +460,8 @@ assignGenes <- function(
   db_j <- file.path(db_dir, paste(db_prefix, organism, tolower(locus), "j", sep="_"))
   aux <- file.path(igdata, "optional_file", paste0(organism,"_gl.aux"))
   
+  # igblast wants TCR rather than TR
+  ig_seqtype <- ifelse(locus == "TR", "TCR", locus) 
   
   stem <- strsplit(file, split="\\.")[[1]][1]
   command <- paste(
@@ -467,7 +469,7 @@ assignGenes <- function(
     paste0("-germline_db_D ", db_d),
     paste0("-germline_db_J ", db_j),
     paste0("-auxiliary_data ", aux),
-    paste0("-domain_system ", domain_system," -ig_seqtype ",locus," -organism ", organism),
+    paste0("-domain_system ", domain_system," -ig_seqtype ",ig_seqtype," -organism ", organism),
     #paste0("-outfmt '7 std qseq sseq btop'"),
     paste0("-outfmt 19"),
     paste0("-query ", file),

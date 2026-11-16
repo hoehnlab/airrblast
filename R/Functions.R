@@ -1,3 +1,38 @@
+
+#' \code{downloadIgBLAST} Downloads IMGT GENE-DB databases
+#' 
+#' Loads all reference germlines from an Immcantation-formatted IMGT database.
+#' 
+# TODO: make auto-download or internal IMGT database
+#' @param dir      directory to contain database
+#' @param version  IgBLAST version to download
+#' @param os       operating system (linux, macosx, win64)
+#' @param patch    download known patches for this release (currently onlu human/mouse _gl.aux for 1.22.0 supported)
+#' @return string showing directory of downloaded igblast files
+#' @details 
+#' 
+#' Wrapper version of downloading from https://ftp.ncbi.nih.gov/blast/executables/igblast/release/
+#' Might not work in all cases, if not just download manually.
+#' 
+#' @export
+downloadIgBLAST = function(dir=".",version="1.22.0",os=c("linux","macosx","win64"),
+  patch=TRUE){
+  os = os[1]
+  dir = paste0("ncbi-igblast-",version)
+  dfile = paste0(dir,"-x64-",os,".tar.gz")
+  utils::download.file(paste0("https://ftp.ncbi.nih.gov/blast/executables/igblast/release/",version,"/",dfile),
+    dfile)
+  system(paste0("tar -xvzf ",dfile))
+  if(patch && grepl("1.22.0",dfile)){
+    print("substituting patched human_gl.aux and mouse_gl.aux files")
+    utils::download.file("https://ftp.ncbi.nih.gov/blast/executables/igblast/release/patch/optional_file/human_gl.aux",
+      file.path(dir,"optional_file","human_gl.aux"))
+    utils::download.file("https://ftp.ncbi.nih.gov/blast/executables/igblast/release/patch/optional_file/mouse_gl.aux",
+      file.path(dir,"optional_file","mouse_gl.aux"))
+  }
+  return(dir)
+}
+
 #' \code{downloadIMGT} Download IMGT GENE-DB databases
 #' 
 #' Loads all reference germlines from an Immcantation-formatted IMGT database.

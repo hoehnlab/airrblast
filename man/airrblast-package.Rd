@@ -17,6 +17,11 @@ Useful links:
 \author{
 \strong{Maintainer}: Kenneth Hoehn \email{kenneth.b.hoehn@dartmouth.edu}
 
+Authors:
+\itemize{
+  \item Kenneth Hoehn \email{kenneth.b.hoehn@dartmouth.edu}
+}
+
 Other contributors:
 \itemize{
   \item Cole Jensen \email{cole.jensen@yale.edu} [contributor]

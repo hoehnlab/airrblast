@@ -27,9 +27,9 @@ Suggests:
     knitr,
     rmarkdown,
     testthat
-RoxygenNote: 7.3.3
 Collate:
     'Airrblast.R'
     'Data.R'
     'Functions.R'
     'zzz.R'
+Config/roxygen2/version: 8.0.0
